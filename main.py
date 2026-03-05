@@ -8,3 +8,7 @@ def analize_csv(csv_file):
 
     print("Shape of dataset:\n")
     print(df.shape)
+
+    print("Columns of dataset:\n")
+    print(df.columns)
+
