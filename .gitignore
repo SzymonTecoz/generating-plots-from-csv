@@ -1,0 +1,15 @@
+# Python cache
+__pycache__/
+*.pyc
+
+# virtual environment
+venv/
+
+# PyCharm
+.idea/
+
+# macOS
+.DS_Store
+
+# generated plots
+plots/*.png

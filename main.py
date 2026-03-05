@@ -1,12 +1,15 @@
 from tkinter import filedialog
-
+import matplotlib.pyplot as plt
+import os
 import pandas as pd
 import sys
 import seaborn as sns
 import tkinter as tk
 
+
 def analize_csv(csv_file):
-    df = pd.read_csv(csv_file)
+    os.makedirs("plots", exist_ok=True)
+    df = pd.read_csv(csv_file, on_bad_lines="skip")
     print("Data loaded\n")
 
     print("Shape of dataset:\n")
@@ -18,9 +21,24 @@ def analize_csv(csv_file):
     print("Dataset preview:\n")
     print(df.head())
 
-    numeric_columns = df.select_dtypes(include="number").columns
     print("Numeric columns detected:\n")
     print(list(numeric_columns))
+
+    numeric_columns = df.select_dtypes(include="number").columns
+    for column in numeric_columns:
+        plt.figure()
+        df[column].hist()
+        plt.title(f"Histogram of {column}")
+        plt.xlabel(column)
+        plt.ylabel("Frequency")
+        file_name = f"plots/{column}_histogram.png"
+        if not os.path.exists(file_name):
+            plt.savefig(file_name)
+            print(f"Saved {file_name}")
+        else:
+            print(f"File {file_name} already exists")
+        plt.figure()
+        plt.close()
 
 
 def select_file():
