@@ -6,6 +6,8 @@ import sys
 import seaborn as sns
 import tkinter as tk
 
+from seaborn import heatmap
+
 
 def analize_csv(csv_file):
     os.makedirs("plots", exist_ok=True)
@@ -22,9 +24,21 @@ def analize_csv(csv_file):
     print(df.head())
 
     print("Numeric columns detected:\n")
-    print(list(numeric_columns))
-
     numeric_columns = df.select_dtypes(include="number").columns
+    print(list(numeric_columns))
+    correlation_matrix = df[numeric_columns].corr()
+    heatmap_file = "plots/correlation_matrix.png"
+    if not os.path.exists(heatmap_file):
+        plt.figure(figsize=(10,8))
+        sns.heatmap(correlation_matrix, annot=True, cmap="coolwarm", fmt = ".2f")
+        plt.savefig(heatmap_file)
+        plt.close()
+        print("Heatmap saved as correlation_matrix.png\n")
+    else:
+        print("Heatmap already exists\n")
+
+
+
     for column in numeric_columns:
         plt.figure()
         df[column].hist()
@@ -39,6 +53,7 @@ def analize_csv(csv_file):
             print(f"File {file_name} already exists")
         plt.figure()
         plt.close()
+
 
 
 def select_file():
