@@ -2,10 +2,8 @@ from tkinter import filedialog
 import matplotlib.pyplot as plt
 import os
 import pandas as pd
-import sys
 import seaborn as sns
 import tkinter as tk
-import hashlib
 import watchdog
 import time
 
@@ -91,28 +89,6 @@ def select_file():
 
     return file_path
 
-def get_file_hash(file_path):
-    hash_md5 = hashlib.md5()
-    with open(file_path, "rb") as f:
-        while chunk := f.read(4096):
-            hash_md5.update(chunk)
-    return hash_md5.hexdigest()
-
-def file_changed(csv_file):
-    hash_file = "data_hash.txt"
-    current_hash = get_file_hash(csv_file)
-    if not os.path.exists(hash_file):
-        with open(hash_file, "w") as f:
-            f.write(current_hash)
-        return True
-    with open(hash_file, "r") as f:
-        saved_hash = f.read()
-
-    if saved_hash != current_hash:
-        with open(hash_file, "w") as f:
-            f.write(current_hash)
-        return True
-    return False
 
 
 
