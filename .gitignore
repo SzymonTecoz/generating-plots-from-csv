@@ -13,3 +13,5 @@ venv/
 
 # generated plots
 plots/*.png
+
+data_hash.txt

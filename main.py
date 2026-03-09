@@ -6,9 +6,35 @@ import sys
 import seaborn as sns
 import tkinter as tk
 import hashlib
+import watchdog
+import time
 
 from seaborn import heatmap
+from watchdog.observers import Observer
 
+
+class CSVHandler():
+    def __init__(self, csv_file):
+        self.csv_file = csv_file
+
+    def on_modified(self, event):
+        if event.src_path == self.csv_file:
+            print("File changed. Updating plots...")
+            analize_csv(self.csv_file)
+
+def watch_csv(csv_file):
+    event_handler = CSVHandler(csv_file)
+    observer = Observer()
+    directory = os.path.dirname(csv_file)
+    observer.schedule(event_handler, directory, recursive=False)
+    observer.start()
+    print("Watching for changes in " + csv_file)
+    try:
+        while True:
+            time.sleep(1)
+    except KeyboardInterrupt:
+        observer.stop()
+    observer.join()
 
 def analize_csv(csv_file):
     os.makedirs("plots", exist_ok=True)
@@ -94,10 +120,7 @@ def file_changed(csv_file):
 if __name__ == "__main__":
     csv_file = select_file()
     if csv_file:
-        if file_changed(csv_file):
-            print("File changed")
-            analize_csv(csv_file)
-        else:
-            print("\nData not changed. No update needed.")
+        analize_csv(csv_file)
+        watch_csv(csv_file)
     else:
         print("No file selected")
