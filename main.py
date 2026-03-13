@@ -15,17 +15,18 @@ from watchdog.events import FileSystemEventHandler
 
 
 class CSVHandler(FileSystemEventHandler):
-    def __init__(self, csv_file):
+    def __init__(self, csv_file, log):
         self.csv_file = csv_file
+        self.log = log
 
     def on_modified(self, event):
         if event.src_path == self.csv_file:
             print("File changed. Updating plots...")
-            analize_csv(self.csv_file)
+            analize_csv(self.csv_file, self.log)
 
-def watch_csv(csv_file):
+def watch_csv(csv_file, log):
 
-    event_handler = CSVHandler(csv_file)
+    event_handler = CSVHandler(csv_file, log)
     observer = Observer()
     directory = os.path.dirname(csv_file)
     observer.schedule(event_handler, directory, recursive=False)
@@ -35,83 +36,84 @@ def watch_csv(csv_file):
 def analize_csv(csv_file, log = None):
     os.makedirs("plots", exist_ok=True)
     df = pd.read_csv(csv_file, sep = None, engine = "python", on_bad_lines="skip")
-    print("Data loaded\n")
+    if log:
+        log("Data loaded")
 
-    print("Shape of dataset:\n")
-    print(df.shape)
+        log("Shape of dataset:")
+        log(str(df.shape))
 
-    print("Columns of dataset:\n")
-    print(df.columns)
+        log("Columns of dataset:")
+        log(str(df.columns))
 
-    print("Dataset preview:\n")
-    print(df.head())
+        log("Dataset preview:")
+        log(str(df.head()))
 
-    print("Numeric columns detected:\n")
-    numeric_columns = df.select_dtypes(include="number").columns
-    print(list(numeric_columns))
-    correlation_matrix = df[numeric_columns].corr()
-    heatmap_file = "plots/correlation_matrix.png"
-    if not os.path.exists(heatmap_file):
-        plt.figure(figsize=(10,8))
-        sns.heatmap(correlation_matrix, annot=True, cmap="coolwarm", fmt = ".2f")
-        plt.savefig(heatmap_file)
-        plt.close()
-        print("\nHeatmap saved as correlation_matrix.png\n")
-    else:
-        print("Heatmap already exists\n")
-
-
-
-    for column in numeric_columns:
-        plt.figure()
-        df[column].hist()
-        plt.title(f"Histogram of {column}")
-        plt.xlabel(column)
-        plt.ylabel("Frequency")
-        file_name = f"plots/{column}_histogram.png"
-        if not os.path.exists(file_name):
-            plt.savefig(file_name)
-            print(f"Saved {file_name}")
+        log("Numeric columns detected:")
+        numeric_columns = df.select_dtypes(include="number").columns
+        log(str(list(numeric_columns)))
+        correlation_matrix = df[numeric_columns].corr()
+        heatmap_file = "plots/correlation_matrix.png"
+        if not os.path.exists(heatmap_file):
+            plt.figure(figsize=(10,8))
+            sns.heatmap(correlation_matrix, annot=True, cmap="coolwarm", fmt = ".2f")
+            plt.savefig(heatmap_file)
+            plt.close()
+            log("Heatmap saved as correlation_matrix.png")
         else:
-            print(f"File {file_name} already exists")
-        plt.close()
+            log("Heatmap already exists")
 
-    boxplot_file = f"plots/{column}_boxplot.png"
 
-    if not os.path.exists(boxplot_file):
-        plt.figure()
 
-        sns.boxplot(x=df[column])
+        for column in numeric_columns:
+            plt.figure()
+            df[column].hist()
+            plt.title(f"Histogram of {column}")
+            plt.xlabel(column)
+            plt.ylabel("Frequency")
+            file_name = f"plots/{column}_histogram.png"
+            if not os.path.exists(file_name):
+                plt.savefig(file_name)
+                log(f"Saved {file_name}")
+            else:
+                log(f"File {file_name} already exists")
+            plt.close()
 
-        plt.title(f"Boxplot of {column}")
+            boxplot_file = f"plots/{column}_boxplot.png"
 
-        plt.savefig(boxplot_file)
-
-        plt.close()
-
-        print(f"Saved {boxplot_file}")
-
-    for i in range(len(numeric_columns)):
-        for j in range(i+1, len(numeric_columns)):
-            col1 = numeric_columns[i]
-            col2 = numeric_columns[j]
-            scatter_file = f"plots/{col1}_vs_{col2}_scatter.png"
-            if not os.path.exists(scatter_file):
+            if not os.path.exists(boxplot_file):
                 plt.figure()
-                sns.scatterplot(x=df[col1], y=df[col2])
-                plt.title(f"{col1} vs {col2}")
-                plt.xlabel(col1)
-                plt.ylabel(col2)
-                plt.savefig(scatter_file)
-                plt.close()
-                print(f"Saved {scatter_file}")
 
-    pairplot_file = "plots/pairplot.png"
-    if not os.path.exists(pairplot_file):
-        pairplot = sns.pairplot(df[numeric_columns])
-        pairplot.savefig(pairplot_file)
-        plt.close()
-        print("Saved pairplot.")
+                sns.boxplot(x=df[column])
+
+                plt.title(f"Boxplot of {column}")
+
+                plt.savefig(boxplot_file)
+
+                plt.close()
+
+                print(f"Saved {boxplot_file}")
+
+        for i in range(len(numeric_columns)):
+            for j in range(i+1, len(numeric_columns)):
+                col1 = numeric_columns[i]
+                col2 = numeric_columns[j]
+                scatter_file = f"plots/{col1}_vs_{col2}_scatter.png"
+                if not os.path.exists(scatter_file):
+                    plt.figure()
+                    sns.scatterplot(x=df[col1], y=df[col2])
+                    plt.title(f"{col1} vs {col2}")
+                    plt.xlabel(col1)
+                    plt.ylabel(col2)
+                    plt.savefig(scatter_file)
+                    plt.close()
+                    log(f"Saved {scatter_file}")
+
+        pairplot_file = "plots/pairplot.png"
+        if not os.path.exists(pairplot_file):
+            pairplot = sns.pairplot(df[numeric_columns])
+            pairplot.savefig(pairplot_file)
+            plt.close()
+            log("Saved pairplot.")
 
 
 
@@ -128,11 +130,22 @@ class App:
     def __init__(self, root):
         self.root = root
         self.root.title("CSV Plot Generator")
+        self.center_window()
         self.root.resizable(True, True)
         self.csv_file = None
         self.setup_style()
         self.create_widgets()
         self.root.protocol("WM_DELETE_WINDOW", self.quit_program)
+
+    def center_window(self, width=700, height=500):
+
+        screen_width = self.root.winfo_screenwidth()
+        screen_height = self.root.winfo_screenheight()
+
+        x = int((screen_width / 2) - (width / 2))
+        y = int((screen_height / 2) - (height / 2))
+
+        self.root.geometry(f"{width}x{height}+{x}+{y}")
 
     def setup_style(self):
         style = ttk.Style()
@@ -152,10 +165,23 @@ class App:
         quit_button.pack(pady=5)
         self.log_box = tk.Text(self.root, height=12, width=70, bg="#f5f5f7")
         self.log_box.pack(fill="both", expand=True, padx=20, pady=15)
+        plots_label = ttk.Label(self.root, text="Generated plots:")
+        plots_label.pack()
+        self.plots_list = tk.Listbox(self.root, height=6)
+        self.plots_list.pack()
+        self.plots_list.bind("<Double-Button-1>", self.open_plot)
 
     def log(self, message):
         self.log_box.insert(tk.END, message + "\n")
         self.log_box.see(tk.END)
+
+    def refresh_plots(self):
+        self.plots_list.delete(0, tk.END)
+        if not os.path.exists("plots"):
+            return
+        for file in os.listdir("plots"):
+            if file.endswith(".png"):
+                self.plots_list.insert(tk.END, file)
 
     def select_file(self):
         file_path = filedialog.askopenfilename(title="Select CSV File", filetypes=(("CSV files", "*.csv"),))
@@ -169,8 +195,17 @@ class App:
             return
         self.log("Analyzing CSV...")
         analize_csv(self.csv_file, self.log)
-        thread = threading.Thread(target=watch_csv, args=(self.csv_file,), daemon=True)
+        self.refresh_plots()
+        thread = threading.Thread(target=watch_csv, args=(self.csv_file, self.log), daemon=True)
         thread.start()
+
+    def open_plot(self, event):
+        selection = self.plots_list.curselection()
+        if not selection:
+            return
+        file_name = self.plots_list.get(selection[0])
+        path = os.path.join("plots", file_name)
+        os.system(f"open '{path}'")
 
     def quit_program(self):
         answer = messagebox.askyesno("Quit", "Do you want to quit the application?")
