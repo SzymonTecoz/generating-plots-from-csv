@@ -76,6 +76,43 @@ def analize_csv(csv_file, log = None):
             print(f"File {file_name} already exists")
         plt.close()
 
+    boxplot_file = f"plots/{column}_boxplot.png"
+
+    if not os.path.exists(boxplot_file):
+        plt.figure()
+
+        sns.boxplot(x=df[column])
+
+        plt.title(f"Boxplot of {column}")
+
+        plt.savefig(boxplot_file)
+
+        plt.close()
+
+        print(f"Saved {boxplot_file}")
+
+    for i in range(len(numeric_columns)):
+        for j in range(i+1, len(numeric_columns)):
+            col1 = numeric_columns[i]
+            col2 = numeric_columns[j]
+            scatter_file = f"plots/{col1}_vs_{col2}_scatter.png"
+            if not os.path.exists(scatter_file):
+                plt.figure()
+                sns.scatterplot(x=df[col1], y=df[col2])
+                plt.title(f"{col1} vs {col2}")
+                plt.xlabel(col1)
+                plt.ylabel(col2)
+                plt.savefig(scatter_file)
+                plt.close()
+                print(f"Saved {scatter_file}")
+
+    pairplot_file = "plots/pairplot.png"
+    if not os.path.exists(pairplot_file):
+        pairplot = sns.pairplot(df[numeric_columns])
+        pairplot.savefig(pairplot_file)
+        plt.close()
+        print("Saved pairplot.")
+
 
 
 def select_file():
