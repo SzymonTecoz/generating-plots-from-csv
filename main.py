@@ -33,7 +33,8 @@ def watch_csv(csv_file, log):
     observer.start()
     print("Watching for changes in " + csv_file)
 
-def analize_csv(csv_file, log = None):
+def analize_csv(csv_file, log = None, hist = True, box = True, scatter = True, heatmap = True, pairplot = True):
+    generated_plots = []
     os.makedirs("plots", exist_ok=True)
     df = pd.read_csv(csv_file, sep = None, engine = "python", on_bad_lines="skip")
     if log:
@@ -52,68 +53,78 @@ def analize_csv(csv_file, log = None):
         numeric_columns = df.select_dtypes(include="number").columns
         log(str(list(numeric_columns)))
         correlation_matrix = df[numeric_columns].corr()
-        heatmap_file = "plots/correlation_matrix.png"
-        if not os.path.exists(heatmap_file):
-            plt.figure(figsize=(10,8))
-            sns.heatmap(correlation_matrix, annot=True, cmap="coolwarm", fmt = ".2f")
-            plt.savefig(heatmap_file)
-            plt.close()
-            log("Heatmap saved as correlation_matrix.png")
-        else:
-            log("Heatmap already exists")
-
-
-
-        for column in numeric_columns:
-            plt.figure()
-            df[column].hist()
-            plt.title(f"Histogram of {column}")
-            plt.xlabel(column)
-            plt.ylabel("Frequency")
-            file_name = f"plots/{column}_histogram.png"
-            if not os.path.exists(file_name):
-                plt.savefig(file_name)
-                log(f"Saved {file_name}")
-            else:
-                log(f"File {file_name} already exists")
-            plt.close()
-
-            boxplot_file = f"plots/{column}_boxplot.png"
-
-            if not os.path.exists(boxplot_file):
-                plt.figure()
-
-                sns.boxplot(x=df[column])
-
-                plt.title(f"Boxplot of {column}")
-
-                plt.savefig(boxplot_file)
-
+        if heatmap:
+            heatmap_file = "plots/correlation_matrix.png"
+            if not os.path.exists(heatmap_file):
+                plt.figure(figsize=(10,8))
+                sns.heatmap(correlation_matrix, annot=True, cmap="coolwarm", fmt = ".2f")
+                plt.savefig(heatmap_file)
                 plt.close()
+                log("Heatmap saved as correlation_matrix.png")
+                generated_plots.append(heatmap_file)
+            else:
+                log("Heatmap already exists")
 
-                print(f"Saved {boxplot_file}")
 
-        for i in range(len(numeric_columns)):
-            for j in range(i+1, len(numeric_columns)):
-                col1 = numeric_columns[i]
-                col2 = numeric_columns[j]
-                scatter_file = f"plots/{col1}_vs_{col2}_scatter.png"
-                if not os.path.exists(scatter_file):
+        if hist:
+            for column in numeric_columns:
+                plt.figure()
+                df[column].hist()
+                plt.title(f"Histogram of {column}")
+                plt.xlabel(column)
+                plt.ylabel("Frequency")
+                file_name = f"plots/{column}_histogram.png"
+                if not os.path.exists(file_name):
+                    plt.savefig(file_name)
+                    log(f"Saved {file_name}")
+                    generated_plots.append(file_name)
+                else:
+                    log(f"File {file_name} already exists")
+                plt.close()
+            if box:
+                boxplot_file = f"plots/{column}_boxplot.png"
+
+                if not os.path.exists(boxplot_file):
                     plt.figure()
-                    sns.scatterplot(x=df[col1], y=df[col2])
-                    plt.title(f"{col1} vs {col2}")
-                    plt.xlabel(col1)
-                    plt.ylabel(col2)
-                    plt.savefig(scatter_file)
-                    plt.close()
-                    log(f"Saved {scatter_file}")
 
-        pairplot_file = "plots/pairplot.png"
-        if not os.path.exists(pairplot_file):
-            pairplot = sns.pairplot(df[numeric_columns])
-            pairplot.savefig(pairplot_file)
-            plt.close()
-            log("Saved pairplot.")
+                    sns.boxplot(x=df[column])
+
+                    plt.title(f"Boxplot of {column}")
+
+                    plt.savefig(boxplot_file)
+
+                    plt.close()
+
+                    print(f"Saved {boxplot_file}")
+                    generated_plots.append(boxplot_file)
+
+        if scatter:
+            for i in range(len(numeric_columns)):
+                for j in range(i+1, len(numeric_columns)):
+                    col1 = numeric_columns[i]
+                    col2 = numeric_columns[j]
+                    scatter_file = f"plots/{col1}_vs_{col2}_scatter.png"
+                    if not os.path.exists(scatter_file):
+                        plt.figure()
+                        sns.scatterplot(x=df[col1], y=df[col2])
+                        plt.title(f"{col1} vs {col2}")
+                        plt.xlabel(col1)
+                        plt.ylabel(col2)
+                        plt.savefig(scatter_file)
+                        plt.close()
+                        log(f"Saved {scatter_file}")
+                        generated_plots.append(scatter_file)
+
+        if pairplot:
+            pairplot_file = "plots/pairplot.png"
+            if not os.path.exists(pairplot_file):
+                pairplot = sns.pairplot(df[numeric_columns])
+                pairplot.savefig(pairplot_file)
+                generated_plots.append(pairplot_file)
+                plt.close()
+                log("Saved pairplot.")
+
+    return generated_plots
 
 
 
@@ -131,6 +142,7 @@ class App:
         self.root = root
         self.root.title("CSV Plot Generator")
         self.center_window()
+        self.root.state("zoomed")
         self.root.resizable(True, True)
         self.csv_file = None
         self.setup_style()
@@ -171,6 +183,19 @@ class App:
         self.plots_list.pack()
         self.plots_list.bind("<Double-Button-1>", self.open_plot)
 
+        plots_frame = ttk.LabelFrame(self.root, text="Select plots to generate:")
+        plots_frame.pack(padx=20, pady=10, fill = "x")
+        self.hist_var = tk.BooleanVar(value=True)
+        self.box_var = tk.BooleanVar(value=True)
+        self.scatter_var = tk.BooleanVar(value=True)
+        self.heatmap_var = tk.BooleanVar(value=True)
+        self.pairplot_var = tk.BooleanVar(value=True)
+        ttk.Checkbutton(plots_frame, text="Histogram", variable=self.hist_var).pack(anchor="w")
+        ttk.Checkbutton(plots_frame, text="Boxplot", variable=self.box_var).pack(anchor="w")
+        ttk.Checkbutton(plots_frame, text="Scatterplot", variable=self.scatter_var).pack(anchor="w")
+        ttk.Checkbutton(plots_frame,text="Heatmap", variable=self.heatmap_var).pack(anchor="w")
+        ttk.Checkbutton(plots_frame, text="Pairplot", variable=self.pairplot_var).pack(anchor="w")
+
     def log(self, message):
         self.log_box.insert(tk.END, message + "\n")
         self.log_box.see(tk.END)
@@ -194,8 +219,8 @@ class App:
             self.log("Select a CSV file first.")
             return
         self.log("Analyzing CSV...")
-        analize_csv(self.csv_file, self.log)
-        self.refresh_plots()
+        plots = analize_csv(self.csv_file, self.log, hist = self.hist_var.get(), box=self.box_var.get(), scatter=self.scatter_var.get(), heatmap=self.heatmap_var.get(), pairplot=self.pairplot_var.get())
+        self.update_plots_list(plots)
         thread = threading.Thread(target=watch_csv, args=(self.csv_file, self.log), daemon=True)
         thread.start()
 
@@ -211,6 +236,15 @@ class App:
         answer = messagebox.askyesno("Quit", "Do you want to quit the application?")
         if answer:
             self.root.destroy()
+
+    def update_plots_list(self, plots):
+
+        self.plots_list.delete(0, tk.END)
+
+        for plot in plots:
+            name = os.path.basename(plot)
+
+            self.plots_list.insert(tk.END, name)
 
 if __name__ == "__main__":
     root = tk.Tk()
